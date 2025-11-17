@@ -66,10 +66,11 @@ router.put("/categories", uploader.single("categoryImage"), EditCategory);
 
 // Product routes
 router.post("/products", uploader.any(), uploadFilesAndAddProducts);
+router.put("/products/:id", uploader.single('file'), updateProduct);
+
 router.get("/products", getAllProducts);
 router.delete("/products/:id", deleteProduct);
 router.get("/products/:id", singleProudct);
-router.put("/products/:id", uploader.single('file'), updateProduct);
 router.post("/search-product", searchProducts);
 
 // Customer routes

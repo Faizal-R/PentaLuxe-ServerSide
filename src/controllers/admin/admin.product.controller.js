@@ -17,8 +17,8 @@ const uploadFilesAndAddProducts = asyncHandler(async (req, res) => {
       DiscountPercentage,
       productVolumes,
     } = parsedBody;
-    console.log("inside the admin add product ",parsedBody);
-    console.log("inside the produt admin22",productVolumes);
+  // console.log("inside the admin add product ",parsedBody);
+  //   console.log("inside the produt admin",productVolumes);
 
     if (!req.files || req.files.length === 0) {
       return res
@@ -27,6 +27,7 @@ const uploadFilesAndAddProducts = asyncHandler(async (req, res) => {
     }
     // Upload files to Cloudinary
     const response = await uploadOnCloudinary(req.files);
+
     if (!response || response.length === 0) {
       return res
         .status(500)

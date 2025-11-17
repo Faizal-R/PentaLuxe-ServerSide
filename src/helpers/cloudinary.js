@@ -1,6 +1,5 @@
 import { v2 as cloudinary } from "cloudinary";
 import fs from "fs";
-import { isArray } from "util";
 
 cloudinary.config({
   cloud_name: "dhbwlpe6i",
