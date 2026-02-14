@@ -1,28 +1,40 @@
 import User from "../../models/user.models.js";
 import { asyncHandler } from "../../helpers/asyncHandler.js";
+import {
+  createResponse,
+  serverErrorResponse,
+} from "../../helpers/responseHandler.js";
+import { statusCodes } from "../../constants.js";
 
 const getAllUser = asyncHandler(async (req, res) => {
-  const users = await User.find({isVerified:true}).populate('addresses')
-     .select("username email status phone addresses")
-     .sort({ createdAt: -1 });
+  const users = await User.find({ isVerified: true })
+    .populate("addresses")
+    .select("username email status phone addresses")
+    .sort({ createdAt: -1 });
+
   console.log("usersInAdminCOnt", users);
+
   if (!users || users.length < 1) {
-    cre
-    return res.status(404).json({
-      success: false,
-      message: "No Users Founded",
-    });
+    return createResponse(
+      res,
+      statusCodes.NOT_FOUND,
+      false,
+      "No Users Founded"
+    );
   }
 
-  return res.status(200).json({
-    success: true,
-    message: "All Users Fetched Successfully",
-    users,
-  });
+  return createResponse(
+    res,
+    statusCodes.OK,
+    true,
+    "All Users Fetched Successfully",
+    users
+  );
 });
 
 const updateUserStatus = asyncHandler(async (req, res) => {
   console.log("insdie UpdateUser");
+
   const { id, status } = req.body;
 
   try {
@@ -31,59 +43,80 @@ const updateUserStatus = asyncHandler(async (req, res) => {
       { status: status === "ACTIVE" ? "BLOCKED" : "ACTIVE" },
       { new: true }
     );
+
     console.log("updatedUser", updatedUser);
 
     if (!updatedUser) {
-      console.log("klsjdf");
-      return res.status(404).json({ message: "User not found" });
+      return createResponse(
+        res,
+        statusCodes.NOT_FOUND,
+        false,
+        "User not found"
+      );
     }
-    res.status(200).json({ message: "User status updated" });
+
+    return createResponse(
+      res,
+      statusCodes.OK,
+      true,
+      "User status updated",
+      updatedUser
+    );
   } catch (error) {
-    res.status(500).json({ message: "Server error", error: error.message });
+    return serverErrorResponse(res);
   }
 });
 
-
-
 const searchUsers = async (req, res) => {
-  console.log('Inside the admin user search')
+  console.log("Inside the admin user search");
+
   const { text } = req.body;
-  console.log(text)
+  console.log(text);
 
   if (!text) {
-    return res.status(400).json({
-      message: "No text provided.",
-      success: false,
-    });
+    return createResponse(
+      res,
+      statusCodes.BAD_REQUEST,
+      false,
+      "No text provided."
+    );
   }
 
   try {
-    const users = await User.find({ username: new RegExp(text, "i") }).populate('addresses')
-    .select("username email status phone addresses");
-    console.log(users)
+    const users = await User.find({
+      username: new RegExp(text, "i"),
+    })
+      .populate("addresses")
+      .select("username email status phone addresses");
+
+    console.log(users);
 
     if (!users || users.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "No users found.",
-      });
+      return createResponse(
+        res,
+        statusCodes.NOT_FOUND,
+        false,
+        "No users found."
+      );
     }
 
-    return res.status(200).json({
-      success: true,
-      message: "Users found.",
-       users
-    });
+    return createResponse(
+      res,
+      statusCodes.OK,
+      true,
+      "Users found.",
+      users
+    );
   } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: "Server error. Please try again later.",
-    });
+    return serverErrorResponse(
+      res,
+      "Server error. Please try again later."
+    );
   }
 };
 
-export { 
+export {
   getAllUser,
-   updateUserStatus, 
-   searchUsers
-  };
+  updateUserStatus,
+  searchUsers,
+};

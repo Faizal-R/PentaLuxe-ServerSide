@@ -4,9 +4,16 @@ import Product from "../../models/product.model.js";
 import Category from "../../models/category.model.js";
 import qs from "qs";
 import { Variant } from "../../models/variant.model.js";
+import {
+  createResponse,
+  serverErrorResponse,
+} from "../../helpers/responseHandler.js";
+import { statusCodes } from "../../constants.js";
+
 const uploadFilesAndAddProducts = asyncHandler(async (req, res) => {
   try {
     console.log("Received request to upload files and add product");
+
     const parsedBody = qs.parse(req.body);
     const {
       Name,
@@ -17,29 +24,33 @@ const uploadFilesAndAddProducts = asyncHandler(async (req, res) => {
       DiscountPercentage,
       productVolumes,
     } = parsedBody;
-  // console.log("inside the admin add product ",parsedBody);
-  //   console.log("inside the produt admin",productVolumes);
 
     if (!req.files || req.files.length === 0) {
-      return res
-        .status(400)
-        .json({ success: false, message: "No files uploaded" });
+      return createResponse(
+        res,
+        statusCodes.BAD_REQUEST,
+        false,
+        "No files uploaded"
+      );
     }
-    // Upload files to Cloudinary
+
     const response = await uploadOnCloudinary(req.files);
 
     if (!response || response.length === 0) {
-      return res
-        .status(500)
-        .json({ success: false, message: "File upload failed" });
+      return serverErrorResponse(res, "File upload failed");
     }
-    // Find the category
+
     const category = await Category.findOne({ categoryName });
+
     if (!category) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Category Not Found" });
+      return createResponse(
+        res,
+        statusCodes.NOT_FOUND,
+        false,
+        "Category Not Found"
+      );
     }
+
     const product = await Product.create({
       Name,
       Description,
@@ -51,7 +62,6 @@ const uploadFilesAndAddProducts = asyncHandler(async (req, res) => {
       CategoryId: category._id,
     });
 
-    // Step 2: Prepare Variants Data
     const productVolumesArray = Object.entries(productVolumes).map(
       ([key, value]) => ({
         productId: product._id,
@@ -62,19 +72,22 @@ const uploadFilesAndAddProducts = asyncHandler(async (req, res) => {
     );
 
     const createdVariants = await Variant.create(productVolumesArray);
+
     await Product.updateOne(
       { _id: product._id },
-      { $set: { Variants: createdVariants.map((variant) => variant._id) } }
+      { $set: { Variants: createdVariants.map((v) => v._id) } }
     );
 
-    res.status(201).json({
-      success: true,
-      message: "Product added successfully",
-      product: product,
-    });
+    return createResponse(
+      res,
+      statusCodes.CREATED,
+      true,
+      "Product added successfully",
+      product
+    );
   } catch (error) {
     console.error("Error adding product:", error);
-    res.status(500).json({ success: false, message: "Internal Server Error" });
+    return serverErrorResponse(res);
   }
 });
 
@@ -84,20 +97,21 @@ const getAllProducts = async (req, res) => {
       .populate("CategoryId")
       .populate("Variants")
       .sort({ createdAt: -1 });
+
     const filteredProducts = products.filter(
       (product) => product.CategoryId !== null
     );
-    res.status(200).json({
-      success: true,
-      message: "Products fetched successfully",
-      products: filteredProducts,
-    });
+
+    return createResponse(
+      res,
+      statusCodes.OK,
+      true,
+      "Products fetched successfully",
+      filteredProducts
+    );
   } catch (err) {
-    console.error(err); // Log the error for debugging
-    res.status(500).json({
-      success: false,
-      message: "Failed to fetch products",
-    });
+    console.error(err);
+    return serverErrorResponse(res, "Failed to fetch products");
   }
 };
 
@@ -105,54 +119,68 @@ const deleteProduct = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
   console.log("adminId", id);
-  // Check if the id is present
+
   if (!id) {
-    return res.status(404).json({
-      success: false,
-      message: "Product ID is required",
-    });
+    return createResponse(
+      res,
+      statusCodes.NOT_FOUND,
+      false,
+      "Product ID is required"
+    );
   }
 
-  // Attempt to find and delete the product
   const deletedProduct = await Product.findByIdAndDelete(id);
 
   if (!deletedProduct) {
-    return res.status(404).json({
-      success: false,
-      message: "Product not found",
-    });
+    return createResponse(
+      res,
+      statusCodes.NOT_FOUND,
+      false,
+      "Product not found"
+    );
   }
 
-  res.status(200).json({
-    success: true,
-    message: "Product deleted successfully",
-    deletedProduct,
-  });
+  return createResponse(
+    res,
+    statusCodes.OK,
+    true,
+    "Product deleted successfully",
+    deletedProduct
+  );
 });
 
 const singleProudct = asyncHandler(async (req, res) => {
   const { id } = req.params;
+
   if (!id) {
-    return res.status(404).json({
-      success: false,
-      message: "Product ID is Not provided",
-    });
+    return createResponse(
+      res,
+      statusCodes.NOT_FOUND,
+      false,
+      "Product ID is Not provided"
+    );
   }
+
   const product = await Product.findById({ _id: id })
     .populate("CategoryId")
     .populate("Variants");
+
   if (!product) {
-    return res.status(404).json({
-      success: false,
-      message: "No Product is Founded With Provided Id",
-    });
+    return createResponse(
+      res,
+      statusCodes.NOT_FOUND,
+      false,
+      "No Product is Founded With Provided Id"
+    );
   }
 
-  return res.status(200).json({
-    success: true,
-    message: "Product fetched Successfully",
-    product,
-  });
+  return createResponse(
+    res,
+    statusCodes.OK,
+    true,
+    "Product fetched Successfully",
+    product
+  );
 });
 
 const updateProduct = async (req, res) => {
@@ -167,51 +195,62 @@ const updateProduct = async (req, res) => {
       Description,
       ScentType,
     } = req.body;
+
     const Quantities = JSON.parse(req.body.Quantities);
     const existingImages = JSON.parse(req.body.existingImages);
-    console.log(req.file)
-  if(req.file){
 
-    const response = await uploadOnCloudinary(req.file);
-    if (!response || response.length === 0) {
-      return res
-        .status(500)
-        .json({ success: false, message: "File upload failed" });
+    console.log(req.file);
+
+    if (req.file) {
+      const response = await uploadOnCloudinary(req.file);
+
+      if (!response || response.length === 0) {
+        return serverErrorResponse(res, "File upload failed");
+      }
+
+      existingImages.push(response[0]);
     }
-    if(response){
-     existingImages.push(response[0])
-    }
-  }
-    const category=await Category.findOne({categoryName})
+
+    const category = await Category.findOne({ categoryName });
+
     const product = await Product.findById(id).populate("Variants");
+
+    if (!product) {
+      return createResponse(
+        res,
+        statusCodes.NOT_FOUND,
+        false,
+        "Product not found"
+      );
+    }
+
     const updatePromises = [];
-    // Iterate through each quantity9
+
     for (const quantity of Quantities) {
       if (quantity._id) {
-        // If the quantity has an ID, update the existing variant
-        const updatePromise = Variant.findByIdAndUpdate(
-          quantity._id,
-          {
+        updatePromises.push(
+          Variant.findByIdAndUpdate(
+            quantity._id,
+            {
+              volume: quantity.volume,
+              price: quantity.price,
+              stock: quantity.stock,
+            },
+            { new: true }
+          )
+        );
+      } else {
+        updatePromises.push(
+          Variant.create({
+            productId: id,
             volume: quantity.volume,
             price: quantity.price,
             stock: quantity.stock,
-          },
-          { new: true } // This option returns the updated document
+          })
         );
-        updatePromises.push(updatePromise);
-      } else {
-        // If the quantity does not have an ID, create a new variant
-        const newVariantPromise = Variant.create({
-          productId: id,
-          volume: quantity.volume,
-          price: quantity.price,
-          stock: quantity.stock,
-        });
-        updatePromises.push(newVariantPromise);
       }
     }
 
-    // Wait for all variant updates/creations to complete
     const updatedVariants = await Promise.all(updatePromises);
 
     product.Name = Name;
@@ -221,20 +260,21 @@ const updateProduct = async (req, res) => {
     product.Description = Description;
     product.ScentType = ScentType;
     product.Images = existingImages;
-    product.Variants = updatedVariants.map((variant) => variant._id); // Update Quantities here
+    product.Variants = updatedVariants.map((v) => v._id);
 
-    // Save the updated product document
     await product.save();
 
     console.log("updatedProduct", product);
-   
-    return res.status(200).json({
-      success: true,
-      message: "Product Updated Successfully",
-    });
+
+    return createResponse(
+      res,
+      statusCodes.OK,
+      true,
+      "Product Updated Successfully"
+    );
   } catch (error) {
     console.error("Error updating product:", error);
-    res.status(500).json({ message: "Internal server error" });
+    return serverErrorResponse(res);
   }
 };
 
@@ -243,36 +283,40 @@ const searchProducts = async (req, res) => {
   console.log(text);
 
   if (!text) {
-    return res.status(400).json({
-      message: "No text provided.",
-      success: false,
-    });
+    return createResponse(
+      res,
+      statusCodes.BAD_REQUEST,
+      false,
+      "No text provided."
+    );
   }
 
   try {
     const products = await Product.find({
       Name: new RegExp(text, "i"),
     }).populate("CategoryId");
+
     console.log(products);
 
     if (!products || products.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "No products found.",
-      });
+      return createResponse(
+        res,
+        statusCodes.NOT_FOUND,
+        false,
+        "No products found."
+      );
     }
 
-    return res.status(200).json({
-      success: true,
-      message: "Products found.",
-      products,
-    });
+    return createResponse(
+      res,
+      statusCodes.OK,
+      true,
+      "Products found.",
+      products
+    );
   } catch (error) {
     console.error(error);
-    return res.status(500).json({
-      success: false,
-      message: "Server error. Please try again later.",
-    });
+    return serverErrorResponse(res, "Server error. Please try again later.");
   }
 };
 

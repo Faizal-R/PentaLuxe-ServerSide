@@ -6,25 +6,34 @@ import {
 } from "../../helpers/responseHandler.js";
 import Category from "../../models/category.model.js";
 import { searchProducts } from "../admin/admin.product.controller.js";
+import { statusCodes } from "../../constants.js";
 
 const productDetails = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  if (!id) return createResponse(res, 404, false, "Product ID is required");
+
+  if (!id)
+    return createResponse(
+      res,
+      statusCodes.NOT_FOUND,
+      false,
+      "Product ID is required"
+    );
 
   const product = await Product.findById(id)
     .populate("Variants")
     .populate("CategoryId");
+
   if (!product)
     return createResponse(
       res,
-      404,
+      statusCodes.NOT_FOUND,
       false,
       "No product exists for the provided ID"
     );
 
   return createResponse(
     res,
-    200,
+    statusCodes.OK,
     true,
     "Product details fetched successfully",
     product
@@ -41,77 +50,106 @@ const getProducts = async (req, res) => {
     const filterdProductsByCategory = products.filter(
       (product) => product.CategoryId !== null
     );
+
     return createResponse(
       res,
-      200,
+      statusCodes.OK,
       true,
       "Products fetched successfully based on user preference.",
       filterdProductsByCategory
     );
   } catch (error) {
     console.error("Error fetching products:", error);
-    return createResponse(res, 500, false, "Error fetching products.");
+    return createResponse(
+      res,
+      statusCodes.INTERNAL_SERVER_ERROR,
+      false,
+      "Error fetching products."
+    );
   }
 };
 
 const searchProductsByCategory = async (req, res) => {
   const { text } = req.body;
-  console.log(text);
 
   if (!text) {
-    return createResponse(res, 400, false, "No Text provided");
+    return createResponse(
+      res,
+      statusCodes.BAD_REQUEST,
+      false,
+      "No Text provided"
+    );
   }
 
   try {
-    const products = await Product.find({}).populate("CategoryId").populate("Variants");
-    const regex = new RegExp(text, "i"); 
+    const products = await Product.find({})
+      .populate("CategoryId")
+      .populate("Variants");
+
+    const regex = new RegExp(text, "i");
+
     const searchedProducts = products.filter((product) =>
       product.CategoryId.categoryName.match(regex)
     );
-    console.log(searchedProducts)
 
     if (!searchedProducts || searchedProducts.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "No products found.",
-      });
+      return createResponse(
+        res,
+        statusCodes.NOT_FOUND,
+        false,
+        "No products found."
+      );
     }
 
-    return res.status(200).json({
-      success: true,
-      message: "Products found.",
-      searchedProducts,
-    });
+    return createResponse(
+      res,
+      statusCodes.OK,
+      true,
+      "Products found.",
+      searchedProducts
+    );
   } catch (error) {
     console.error(error);
-    return res.status(500).json({
-      success: false,
-      message: "Server error. Please try again later.",
-    });
+    return createResponse(
+      res,
+      statusCodes.INTERNAL_SERVER_ERROR,
+      false,
+      "Server error. Please try again later."
+    );
   }
 };
 
 const getRelatedProducts = async (req, res) => {
-  console.log("inside related products");
   try {
     const { categoryName, productID } = req.body;
+
     const category = await Category.findOne({ categoryName });
+
     if (!category) {
-      return createResponse(res, 404, false, "Category Not Found");
+      return createResponse(
+        res,
+        statusCodes.NOT_FOUND,
+        false,
+        "Category Not Found"
+      );
     }
-    const relatedProducts = await Product.find({ CategoryId: category._id })
+
+    const relatedProducts = await Product.find({
+      CategoryId: category._id,
+    })
       .populate("Variants")
       .populate("CategoryId")
       .limit(3);
+
     return createResponse(
       res,
-      200,
+      statusCodes.OK,
       true,
       "related product fetched Successfully",
       relatedProducts
     );
   } catch (error) {
-    serverErrorResponse(res);
+    return serverErrorResponse(res);
   }
 };
 

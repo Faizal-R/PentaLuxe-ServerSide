@@ -1,35 +1,37 @@
 import User from "../../models/user.models.js";
 import jwt from "jsonwebtoken";
-import bcrypt from "bcryptjs";
-import passport from "passport";
 import { asyncHandler } from "../../helpers/asyncHandler.js";
 import { sendOTPEmail } from "../../helpers/EmailOTPSender.js";
 import { generateOtp } from "../../utils/GenerateOtp.js";
 import { generateAccesTokenAndRefreshToken } from "../../helpers/GenerateTokens.js";
 import { createResponse } from "../../helpers/responseHandler.js";
+import { statusCodes } from "../../constants.js";
 
-// @desc Register a new user
-// @route POST /api/register
-// @access Public
+// REGISTER
 const registerUser = asyncHandler(async (req, res) => {
   const { username, email, password, phone } = req.body;
 
-  // Check if user already exists
   const userExist = await User.findOne({ email });
   if (userExist) {
-    return createResponse(res, 409, false, "User Already Exists");
+    return createResponse(
+      res,
+      statusCodes.CONFLICT,
+      false,
+      "User Already Exists",
+    );
   }
 
-  // Generate OTP
   const otp = generateOtp(4);
-  console.log("Generated OTP:", otp);
 
-  // Send OTP via email
   try {
     await sendOTPEmail(email, otp);
-    console.log("OTP sent to:", email);
   } catch (error) {
-    return createResponse(res, 500, false, "Failed to send OTP email.");
+    return createResponse(
+      res,
+      statusCodes.INTERNAL_SERVER_ERROR,
+      false,
+      "Failed to send OTP email.",
+    );
   }
 
   const user = await User.create({
@@ -41,161 +43,233 @@ const registerUser = asyncHandler(async (req, res) => {
     otpExpiryTime: Date.now() + 5 * 60 * 1000,
   });
 
-  console.log("user", user);
-
   const createdUser = await User.findById(user._id).select(
-    "-password -otp -refreshToken"
+    "-password -otp -refreshToken",
   );
 
-  return createResponse(res, 201, true, "User created successfully. Please verify your OTP.", createdUser);
+  return createResponse(
+    res,
+    statusCodes.CREATED,
+    true,
+    "User created successfully. Please verify your OTP.",
+    createdUser,
+  );
 });
 
-
-// @desc verify Otp
-// @route POST /api/user/otp-verify
-// @access Public
+// VERIFY OTP
 const VerifyOtp = asyncHandler(async (req, res) => {
-  console.log("Entering the OTP route");
-
   const { otp, email } = req.body;
-  console.log(`Received OTP: ${otp}, Email: ${email}`);
 
   try {
-    // Find the user by email
     const user = await User.findOne({ email });
-    // Check if user not found
+
     if (!user) {
-      return createResponse(res, 400, false, "No account found with this email address.");
+      return createResponse(
+        res,
+        statusCodes.BAD_REQUEST,
+        false,
+        "No account found with this email address.",
+      );
     }
 
     if (Date.now() > user.otpExpiryTime) {
-      return createResponse(res, 400, false, "OTP has expired.");
+      return createResponse(
+        res,
+        statusCodes.BAD_REQUEST,
+        false,
+        "OTP has expired.",
+      );
     }
 
-    // Check if the OTP matches
     if (user.otp === otp) {
       user.isVerified = true;
       user.otp = null;
       await user.save();
-      console.log("OTP verification successful.");
 
-      // Generating accessToken and refreshToken
-      const { accessToken, refreshToken } = await generateAccesTokenAndRefreshToken(user._id);
-      return createResponse(res, 200, true, "OTP verification successfully completed.", { accessToken, refreshToken });
+      const { accessToken, refreshToken } =
+        await generateAccesTokenAndRefreshToken(user._id);
+
+      return createResponse(
+        res,
+        statusCodes.OK,
+        true,
+        "OTP verification successfully completed.",
+        { accessToken, refreshToken },
+      );
     } else {
-      console.log("Invalid OTP provided.");
-      return createResponse(res, 400, false, "Invalid OTP. Please try again.");
+      return createResponse(
+        res,
+        statusCodes.BAD_REQUEST,
+        false,
+        "Invalid OTP. Please try again.",
+      );
     }
   } catch (error) {
-    console.error("Error verifying OTP:", error);
-    return createResponse(res, 500, false, "An error occurred during OTP verification.");
+    return createResponse(
+      res,
+      statusCodes.INTERNAL_SERVER_ERROR,
+      false,
+      "An error occurred during OTP verification.",
+    );
   }
 });
 
-
-// @desc resend otp
-// @route POST /api/user/resend-otp
-// @access Public
-
+// RESEND OTP
 const resendOtp = asyncHandler(async (req, res) => {
   const { email } = req.body;
   const user = await User.findOne({ email });
-  
+
   if (!user) {
-    return createResponse(res, 404, false, "User not found");
+    return createResponse(res, statusCodes.NOT_FOUND, false, "User not found");
   }
-  
+
   const otp = generateOtp(4);
   user.otp = otp;
   user.otpExpiryTime = Date.now() + 5 * 60 * 1000;
 
   await user.save();
-  console.log("User OTP:", user.otp);
 
   try {
     await sendOTPEmail(email, otp);
-    return createResponse(res, 200, true, `OTP sent successfully to ${email}`);
+    return createResponse(
+      res,
+      statusCodes.OK,
+      true,
+      `OTP sent successfully to ${email}`,
+    );
   } catch (error) {
-    console.error("Error sending OTP email:", error);
-    return createResponse(res, 500, false, "Failed to send OTP email");
+    return createResponse(
+      res,
+      statusCodes.INTERNAL_SERVER_ERROR,
+      false,
+      "Failed to send OTP email",
+    );
   }
 });
 
-
+// LOGOUT
 const logOutUser = asyncHandler(async (req, res) => {
-  console.log("inside logout");
-  const user = await User.findByIdAndUpdate(
+  await User.findByIdAndUpdate(
     req.user._id,
-    {
-      $unset: {
-        refreshToken: 1,
-      },
-    },
-    {
-      new: true,
-    }
+    { $unset: { refreshToken: 1 } },
+    { new: true },
   );
 
- return createResponse(res,200,true,"User Logout Successfully")
+  return createResponse(res, statusCodes.OK, true, "User Logout Successfully");
 });
 
+// LOGIN
 const logInUser = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
-  if(email.trim()==='' || password.trim()===''){
-    return createResponse(res,401,false,"Email and Password are required")
+
+  if (email.trim() === "" || password.trim() === "") {
+    return createResponse(
+      res,
+      statusCodes.UNAUTHORIZED,
+      false,
+      "Email and Password are required",
+    );
   }
 
   const user = await User.findOne({ email });
-  if(!user.password){
-    return createResponse(res, 400, false, "You can Try another login Method");
+
+  if (!user.password) {
+    return createResponse(
+      res,
+      statusCodes.BAD_REQUEST,
+      false,
+      "You can Try another login Method",
+    );
   }
+
   if (!user) {
-    return createResponse(res, 404, false, "Invalid Email Or Password");
+    return createResponse(
+      res,
+      statusCodes.NOT_FOUND,
+      false,
+      "Invalid Email Or Password",
+    );
   }
-  
+
   if (!user.isVerified) {
-    return createResponse(res, 401, false, "Please verify your email to activate your account");
+    return createResponse(
+      res,
+      statusCodes.UNAUTHORIZED,
+      false,
+      "Please verify your email to activate your account",
+    );
   }
-  if(user.status==="BLOCKED") return createResponse(res, 401, false, "User Account Has been Blocked")
 
+  if (user.status === "BLOCKED") {
+    return createResponse(
+      res,
+      statusCodes.UNAUTHORIZED,
+      false,
+      "User Account Has been Blocked",
+    );
+  }
 
-    const isMatch = await user.isPasswordCorrect(password);
- 
+  const isMatch = await user.isPasswordCorrect(password);
+
   if (!isMatch) {
-    return createResponse(res, 401, false, "Invalid Email Or Password");
+    return createResponse(
+      res,
+      statusCodes.UNAUTHORIZED,
+      false,
+      "Invalid Email Or Password",
+    );
   }
 
-  const { accessToken, refreshToken } = await generateAccesTokenAndRefreshToken(user._id);
-  
+  const { accessToken, refreshToken } = await generateAccesTokenAndRefreshToken(
+    user._id,
+  );
+
   user.refreshToken = refreshToken;
   await user.save();
-console.log("inside the login")
-  return createResponse(res, 200, true, "User logged in successfully", {
-    accessToken,
-    refreshToken,
-  });
+
+  return createResponse(
+    res,
+    statusCodes.OK,
+    true,
+    "User logged in successfully",
+    { accessToken, refreshToken },
+  );
 });
 
-
+// GOOGLE AUTH
 const googleAuth = asyncHandler(async (req, res) => {
-  console.log("inside googleAuth")
   const { username, email } = req.body;
 
   const userExist = await User.findOne({ email });
-  
 
   if (userExist) {
-    if(userExist.status==="BLOCKED") return createResponse(res, 401, false, "User Account Has been Blocked")
+    if (userExist.status === "BLOCKED") {
+      return createResponse(
+        res,
+        statusCodes.UNAUTHORIZED,
+        false,
+        "User Account Has been Blocked",
+      );
+    }
+
     try {
       const { accessToken, refreshToken } =
         await generateAccesTokenAndRefreshToken(userExist._id);
-      return createResponse(res, 200, true, "User Logged In Successfully", {
-        accessToken,
-        refreshToken,
-      });
+
+      return createResponse(
+        res,
+        statusCodes.OK,
+        true,
+        "User Logged In Successfully",
+        { accessToken, refreshToken },
+      );
     } catch (error) {
-      console.log("error", error);
-      return createResponse(res, 500, false, "Failed to generate tokens");
+      return createResponse(
+        res,
+        statusCodes.INTERNAL_SERVER_ERROR,
+        false,
+        "Failed to generate tokens",
+      );
     }
   }
 
@@ -204,22 +278,27 @@ const googleAuth = asyncHandler(async (req, res) => {
     email,
     isVerified: true,
   });
-  console.log("googleAuthUser:", user);
 
   if (user) {
     const { accessToken, refreshToken } =
       await generateAccesTokenAndRefreshToken(user._id);
-    console.log("tokenACC", accessToken);
-    return createResponse(res, 201, true, "User Signed Up Successfully", {
-      user,
-      accessToken,
-      refreshToken,
-    });
+
+    return createResponse(
+      res,
+      statusCodes.CREATED,
+      true,
+      "User Signed Up Successfully",
+      { user, accessToken, refreshToken },
+    );
   } else {
-    return createResponse(res, 500, false, "Failed to create user");
+    return createResponse(
+      res,
+      statusCodes.INTERNAL_SERVER_ERROR,
+      false,
+      "Failed to create user",
+    );
   }
 });
-
 
 export {
   registerUser,

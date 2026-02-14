@@ -1,10 +1,10 @@
-
 import {
   createResponse,
   serverErrorResponse,
 } from "../../helpers/responseHandler.js";
 import Offer from "../../models/offer.model.js";
 import Product from "../../models/product.model.js";
+import { statusCodes } from "../../constants.js";
 
 const processProductOffer = async (req, res) => {
   const { DiscountPercentage, itemId } = req.body;
@@ -12,35 +12,40 @@ const processProductOffer = async (req, res) => {
   console.log(req.body);
 
   try {
-    const offer=await Offer.create({
+    const offer = await Offer.create({
       DiscountPercentage,
-      offerType:"Product",
-      offerFor:itemId
+      offerType: "Product",
+      offerFor: itemId,
+    });
 
-    })
-    console.log("offer",offer)
+    console.log("offer", offer);
+
     const product = await Product.findByIdAndUpdate(
       itemId,
       { DiscountPercentage },
       { new: true }
     );
 
-
     if (!product) {
-      return res.status(404).json({ message: "Product not found" });
+      return createResponse(
+        res,
+        statusCodes.NOT_FOUND,
+        false,
+        "Product not found"
+      );
     }
-     
 
     console.log("Updated Product", product);
+
     return createResponse(
       res,
-      200,
+      statusCodes.OK,
       true,
       `Successfully updated the discount to ${product.DiscountPercentage}% for product ${product.Name}.`
     );
   } catch (error) {
     console.log(error);
-    serverErrorResponse(res);
+    return serverErrorResponse(res);
   }
 };
 
@@ -52,8 +57,12 @@ const processCategoryOffer = async (req, res) => {
     const products = await Product.find({ CategoryId: itemId });
 
     if (products.length === 0) {
-        createResponse(res,404,false,"No products found for the given category.")
-    
+      return createResponse(
+        res,
+        statusCodes.NOT_FOUND,
+        false,
+        "No products found for the given category."
+      );
     }
 
     await Promise.all(
@@ -62,32 +71,44 @@ const processCategoryOffer = async (req, res) => {
         await product.save();
       })
     );
-    const offer=await Offer.create({
-      DiscountPercentage,
-      offerType:"Category",
-      offerFor:itemId
 
-    })
-    console.log("categoryOffer",offer)
+    const offer = await Offer.create({
+      DiscountPercentage,
+      offerType: "Category",
+      offerFor: itemId,
+    });
+
+    console.log("categoryOffer", offer);
 
     return createResponse(
       res,
-      200,
+      statusCodes.OK,
       true,
       "Discount percentage updated successfully for the category."
     );
   } catch (error) {
-    serverErrorResponse(res);
+    return serverErrorResponse(res);
   }
 };
 
-const ListOffers=async(req,res)=>{
-  const offers=await Offer.find().populate('offerFor').sort({createdAt:-1})
-  console.log(offers)
+const ListOffers = async (req, res) => {
+  try {
+    const offers = await Offer.find()
+      .populate("offerFor")
+      .sort({ createdAt: -1 });
 
-  return createResponse(res,200,true,"Offers retrieved Successfully",offers)
+    console.log(offers);
 
+    return createResponse(
+      res,
+      statusCodes.OK,
+      true,
+      "Offers retrieved Successfully",
+      offers
+    );
+  } catch (error) {
+    return serverErrorResponse(res);
+  }
+};
 
-}
-
-export { processProductOffer, processCategoryOffer ,ListOffers};
+export { processProductOffer, processCategoryOffer, ListOffers };

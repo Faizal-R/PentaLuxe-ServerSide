@@ -45,4 +45,7 @@ const generateSalesReport = async (req, res) => {
   }
 };
 
+
+
+
 export { generateSalesReport };

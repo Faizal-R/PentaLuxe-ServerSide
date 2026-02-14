@@ -5,17 +5,18 @@ import {
 import Order from "../../models/order.model.js";
 import Product from "../../models/product.model.js";
 import Category from "../../models/category.model.js";
+import { statusCodes } from "../../constants.js";
 
 const getAdminDashboard = async (req, res) => {
   const { filter } = req.query;
 
   try {
     const currentYear = new Date().getFullYear();
-    const currentMonth = new Date().getMonth() + 1; // 1-indexed month
+    const currentMonth = new Date().getMonth() + 1;
+
     console.log(currentMonth);
 
     if (filter === "yearly") {
-      // Aggregate sales data by month
       const monthlySales = await Order.aggregate([
         {
           $match: {
@@ -38,21 +39,11 @@ const getAdminDashboard = async (req, res) => {
         status: { $in: ["Confirmed", "Delivered", "Shipped"] },
       });
 
-      // Prepare all months with sales initialized to 0
       const monthNames = [
-        "January",
-        "February",
-        "March",
-        "April",
-        "May",
-        "June",
-        "July",
-        "August",
-        "September",
-        "October",
-        "November",
-        "December",
+        "January","February","March","April","May","June",
+        "July","August","September","October","November","December",
       ];
+
       const MonthlySales = monthNames.map((name, index) => ({
         field: name,
         sales:
@@ -61,8 +52,6 @@ const getAdminDashboard = async (req, res) => {
             ?.totalAmount.toFixed(0) || 0,
       }));
 
-      console.log("Monthly", MonthlySales);
-      console.log("monthly", monthlySales);
       const totalSales = MonthlySales.reduce(
         (acc, sales) => acc + Number(sales.sales),
         0
@@ -70,13 +59,14 @@ const getAdminDashboard = async (req, res) => {
 
       return createResponse(
         res,
-        200,
+        statusCodes.OK,
         true,
         "Yearly Sales Data Retrieved Successfully",
         { sales: MonthlySales, totalSales, totalOrders }
       );
-    } else if (filter === "monthly") {
-      // Aggregate sales data by day for the current month
+    }
+
+    if (filter === "monthly") {
       const dailySales = await Order.aggregate([
         {
           $match: {
@@ -84,7 +74,7 @@ const getAdminDashboard = async (req, res) => {
               $and: [
                 { $eq: [{ $month: "$orderDate" }, currentMonth] },
                 { $eq: [{ $year: "$orderDate" }, currentYear] },
-                { $in: ["$status", ["Delivered", "Confirmed", "Shipped"]] }, // Moved status inside $expr
+                { $in: ["$status", ["Delivered", "Confirmed", "Shipped"]] },
               ],
             },
           },
@@ -98,7 +88,6 @@ const getAdminDashboard = async (req, res) => {
         { $sort: { "_id.day": 1 } },
       ]);
 
-      // Create an array for all days of the month (1 to 31)
       const DailySales = Array.from({ length: 31 }, (_, i) => ({
         field: `${i + 1}`,
         sales:
@@ -106,18 +95,19 @@ const getAdminDashboard = async (req, res) => {
             .find((sale) => sale._id.day === i + 1)
             ?.totalAmount.toFixed(0) || 0,
       }));
-      console.log("Daily", DailySales);
-      console.log("daily", dailySales);
+
       const totalSales = DailySales.reduce(
         (acc, sales) => acc + Number(sales.sales),
         0
       );
+
       const totalOrders = await Order.countDocuments({
         status: { $in: ["Confirmed", "Delivered", "Shipped"] },
       });
+
       return createResponse(
         res,
-        200,
+        statusCodes.OK,
         true,
         "Monthly Sales Date Retrieved Successfully",
         {
@@ -130,19 +120,22 @@ const getAdminDashboard = async (req, res) => {
       );
     }
 
-    res.json({ message: "Invalid filter" });
+    return createResponse(
+      res,
+      statusCodes.BAD_REQUEST,
+      false,
+      "Invalid filter"
+    );
   } catch (error) {
     console.error(error);
-    res
-      .status(500)
-      .json({ success: false, message: "Error fetching sales data" });
+    return serverErrorResponse(res, "Error fetching sales data");
   }
 };
 
 const bestSellingProducts = async (req, res) => {
   try {
     const products = await Order.aggregate([
-      {$match:{status:{$in:["Delivered","Confirmed","Shipped"]}}},
+      { $match: { status: { $in: ["Delivered", "Confirmed", "Shipped"] } } },
       { $unwind: "$items" },
       {
         $group: {
@@ -154,11 +147,17 @@ const bestSellingProducts = async (req, res) => {
     ]);
 
     if (products.length === 0) {
-      return createResponse(res, 404, "No products found");
+      return createResponse(
+        res,
+        statusCodes.NOT_FOUND,
+        false,
+        "No products found"
+      );
     }
+
     return createResponse(
       res,
-      200,
+      statusCodes.OK,
       true,
       "Best selling products retrieved successfully",
       products
@@ -171,7 +170,7 @@ const bestSellingProducts = async (req, res) => {
 const bestSellingCategories = async (req, res) => {
   try {
     const categories = await Order.aggregate([
-      {$match:{status:{$in:["Delivered","Confirmed","Shipped"]}}},
+      { $match: { status: { $in: ["Delivered", "Confirmed", "Shipped"] } } },
       { $unwind: "$items" },
       {
         $group: {
@@ -183,12 +182,19 @@ const bestSellingCategories = async (req, res) => {
     ]);
 
     if (categories.length === 0) {
-      return createResponse(res, 404, "No products found");
+      return createResponse(
+        res,
+        statusCodes.NOT_FOUND,
+        false,
+        "No products found"
+      );
     }
+
     console.log(categories);
+
     return createResponse(
       res,
-      200,
+      statusCodes.OK,
       true,
       "Best selling products retrieved successfully",
       categories

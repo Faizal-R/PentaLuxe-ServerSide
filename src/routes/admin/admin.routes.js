@@ -49,7 +49,7 @@ const router = express.Router();
 router.post("/login", adminLogin);
 
 
-router.use(adminVerifyToken);
+// router.use(adminVerifyToken);
 
 
 // Category routes

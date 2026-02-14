@@ -16,7 +16,6 @@ app.use(express.static("public"));
 app.use(express.json());
 app.use(cookieParser());
 app.use(nocache());
-// const mongoUrl = process.env.MONGO_URL || 'mongodb+srv://5zziiihhh:pentaluxe@pentaluxe-e-commerce.ra5wd.mongodb.net/?retryWrites=true&w=majority&appName=PentaLuxe-E-Commerce';
 app.use(
   cors({
     origin:["https://pentaluxeshop.vercel.app","http://localhost:6776",] ,

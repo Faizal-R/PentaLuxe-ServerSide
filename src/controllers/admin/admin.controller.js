@@ -3,22 +3,34 @@ import { uploadOnCloudinary } from "../../helpers/cloudinary.js";
 import Category from "../../models/category.model.js";
 import User from "../../models/user.models.js";
 import { asyncHandler } from "../../helpers/asyncHandler.js";
+import { logger } from "../../utils/logger.js";
 import {
   createResponse,
   serverErrorResponse,
 } from "../../helpers/responseHandler.js";
+import { statusCodes } from "../../constants.js";
+
 const adminLogin = (req, res) => {
   console.log("inside the adminController");
+
   const { email, password } = req.body;
-  if (email.trim() === "") {
-    return res
-      .status(404)
-      .json({ success: false, message: "Email is required" });
+
+  if (!email || email.trim() === "") {
+    return createResponse(
+      res,
+      statusCodes.BAD_REQUEST,
+      false,
+      "Email is required",
+    );
   }
-  if (password.trim() === "") {
-    return res
-      .status(404)
-      .json({ success: false, message: "Password is required" });
+
+  if (!password || password.trim() === "") {
+    return createResponse(
+      res,
+      statusCodes.BAD_REQUEST,
+      false,
+      "Password is required",
+    );
   }
 
   if (
@@ -28,76 +40,99 @@ const adminLogin = (req, res) => {
     const token = jwt.sign({ email }, process.env.ADMIN_TOKEN_SECRET, {
       expiresIn: process.env.ADMIN_TOKEN_EXPIRY,
     });
+
     console.log("admin Token", token);
-    return res.status(200).json({
-      success: true,
-      message: "Admin LoggedIn Successfully",
-      token,
-    });
+
+    return createResponse(
+      res,
+      statusCodes.OK,
+      true,
+      "Admin LoggedIn Successfully",
+      { token },
+    );
   }
 
-  return res
-    .status(403)
-    .json({ success: false, message: "Invalid Email or Password" });
+  return createResponse(
+    res,
+    statusCodes.FORBIDDEN,
+    false,
+    "Invalid Email Or Password",
+  );
 };
 
 const uploadFilesAndAddCategory = async (req, res) => {
   console.log("Inside the file upload function");
-  console.log("req.file:", req.file); // Check what req.file contains
+  console.log("req.file:", req.file);
+
   if (!req.file) {
-    return res
-      .status(400)
-      .json({ success: false, message: "No file uploaded" });
+    return createResponse(
+      res,
+      statusCodes.BAD_REQUEST,
+      false,
+      "No file uploaded",
+    );
   }
 
   const categoryName = req.body.categoryName;
-  const category = await Category.findOne({
-    categoryName: { $regex: new RegExp(categoryName, "i") },
-  });
-  if (category) {
-    return res.status(409).json({
-      success: true,
-      message: "Category Already Exists",
-    });
-  }
 
   try {
+    const category = await Category.findOne({
+      categoryName: { $regex: new RegExp(categoryName, "i") },
+    });
+
+    if (category) {
+      return createResponse(
+        res,
+        statusCodes.CONFLICT,
+        false,
+        "Category Already Exists",
+      );
+    }
+
     const response = await uploadOnCloudinary(req.file);
-    console.log(response);
+
     const createdCategory = await Category.create({
       categoryName,
       categoryImage: response[0],
     });
-    res.status(201).json({
-      success: true,
-      message: "File uploaded successfully",
-      data: createdCategory,
-    });
+
+    return createResponse(
+      res,
+      statusCodes.CREATED,
+      true,
+      "File uploaded successfully",
+      createdCategory,
+    );
   } catch (error) {
     console.error("Error uploading file:", error);
-    res.status(500).json({
-      success: false,
-      message: "An error occurred while uploading the file",
-    });
+    return serverErrorResponse(res);
   }
 };
 
 const getCategories = async (req, res) => {
+  logger("Inside GetCategories Controller");
   try {
     const categories = await Category.find().sort({ createdAt: -1 });
-    if (!categories || categories.length === 0)
-      return res.status(404).json({
-        success: false,
-        message: "No categories found.",
-      });
-    return res.status(200).json({
-      success: true,
-      message: "Categories retrieved successfully.",
+    console.log(categories);
+    if (!categories || categories.length === 0) {
+      return createResponse(
+        res,
+        statusCodes.NOT_FOUND,
+        false,
+        "No categories found.",
+      );
+    }
+
+    return createResponse(
+      res,
+      statusCodes.OK,
+      true,
+      "Categories retrieved successfully.",
       categories,
-    });
+    );
   } catch (error) {
     console.log(error);
-    serverErrorResponse(res);
+    return serverErrorResponse(res);
   }
 };
 
@@ -106,73 +141,108 @@ const deleteCategory = async (req, res) => {
     const { id } = req.params;
 
     if (!id) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Category ID is required" });
+      return createResponse(
+        res,
+        statusCodes.BAD_REQUEST,
+        false,
+        "Category ID is required",
+      );
     }
+
     const deletedCategory = await Category.findByIdAndDelete(id);
 
     if (!deletedCategory) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Category not found" });
+      return createResponse(
+        res,
+        statusCodes.NOT_FOUND,
+        false,
+        "Category not found",
+      );
     }
 
-    res.status(200).json({
-      success: true,
-      message: "Category deleted successfully",
+    return createResponse(
+      res,
+      statusCodes.OK,
+      true,
+      "Category deleted successfully",
       deletedCategory,
-    });
+    );
   } catch (error) {
     console.error("Error deleting category:", error);
-    res.status(500).json({ success: false, message: "Internal server error" });
+    return serverErrorResponse(res);
   }
 };
 
 const EditCategory = async (req, res) => {
-  const { categoryName,categoryId } = req.body;
+  const { categoryName, categoryId } = req.body;
+
   console.log("req.body", req.body);
   console.log(req.file);
-  if (categoryName.trim() === "") {
-    return createResponse(res, 400, false, "Category Name is Required");
-  }
-  try {
-    const existCategory=await Category.findOne({categoryName})
-    if(existCategory) return createResponse(res,409,false,"Category Already Exist With The Given Name")
-    const category = await Category.findById(categoryId);
-   
-  if (!category) {
-    return createResponse(res, 404, false, "No Category Founded");
-  }
 
-  if (req.file) {
-    const response = await uploadOnCloudinary(req.file);
-    console.log("inside edit categoryEdit Upload", response);
-    category.categoryName = categoryName;
-    category.categoryImage = response[0];
-    await category.save();
-    console.log(category)
+  if (!categoryName || categoryName.trim() === "") {
     return createResponse(
       res,
-      200,
-      true,
-      "Category Updated Successfully",
-      category
+      statusCodes.BAD_REQUEST,
+      false,
+      "Category Name is Required",
     );
   }
- 
-  category.categoryName = categoryName;
-  await category.save();
-  return createResponse(
-    res,
-    200,
-    true,
-    "Category Updated Successfully",
-    category
-  );
+
+  try {
+    const existCategory = await Category.findOne({ categoryName });
+
+    if (existCategory) {
+      return createResponse(
+        res,
+        statusCodes.CONFLICT,
+        false,
+        "Category Already Exist With The Given Name",
+      );
+    }
+
+    const category = await Category.findById(categoryId);
+
+    if (!category) {
+      return createResponse(
+        res,
+        statusCodes.NOT_FOUND,
+        false,
+        "No Category Founded",
+      );
+    }
+
+    if (req.file) {
+      const response = await uploadOnCloudinary(req.file);
+
+      console.log("inside edit categoryEdit Upload", response);
+
+      category.categoryName = categoryName;
+      category.categoryImage = response[0];
+
+      await category.save();
+
+      return createResponse(
+        res,
+        statusCodes.OK,
+        true,
+        "Category Updated Successfully",
+        category,
+      );
+    }
+
+    category.categoryName = categoryName;
+    await category.save();
+
+    return createResponse(
+      res,
+      statusCodes.OK,
+      true,
+      "Category Updated Successfully",
+      category,
+    );
   } catch (error) {
-    console.log(error)
-    serverErrorResponse(res)
+    console.log(error);
+    return serverErrorResponse(res);
   }
 };
 

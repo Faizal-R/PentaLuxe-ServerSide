@@ -63,7 +63,7 @@ router.post("/register", registerUser);
 router.post("/otp-verify", VerifyOtp);
 router.post("/resend-otp", resendOtp);
 router.post("/logout", verifyToken, logOutUser);
-router.post("/login",logInUser);
+router.post("/login", logInUser);
 router.post("/google-auth", googleAuth);
 
 // User profile routes with userStatus middleware
@@ -81,8 +81,8 @@ router.delete("/address-book/:id", verifyToken, userStatus, DeleteAddress);
 // Product routes with userStatus middleware
 router.get("/products", userStatus, getProducts);
 router.get("/products/:id", productDetails);
-router.post('/related-products',getRelatedProducts)
-router.post('/search-products-by-category',searchProductsByCategory)
+router.post("/related-products", getRelatedProducts);
+router.post("/search-products-by-category", searchProductsByCategory);
 
 // Category routes
 router.get("/categories", getCategories);
@@ -105,28 +105,33 @@ router.post(
   "/create-razorpay-order",
   verifyToken,
   userStatus,
-  createRazorpayOrder
+  createRazorpayOrder,
 );
 router.post(
   "/verify-payment-and-create-order",
   verifyToken,
   userStatus,
-  paymentVerification
+  paymentVerification,
 );
 router.post(
   "/razorpay-payment-failure",
   verifyToken,
   userStatus,
-  handlePaymentFailed
+  handlePaymentFailed,
 );
 
-router.put('/order-retry-payment',verifyToken,userStatus,paymentVerification)
+router.put(
+  "/order-retry-payment",
+  verifyToken,
+  userStatus,
+  paymentVerification,
+);
 router.get("/getkey", async (req, res) =>
-  res.status(200).json({ key: process.env.RAZORPAY_API_KEY })
+  res.status(200).json({ key: process.env.RAZORPAY_API_KEY }),
 );
 
 // Coupons routes
-router.get("/coupons", userStatus,getAllCoupons );
+router.get("/coupons", userStatus, getAllCoupons);
 
 // Wishlist routes with userStatus middleware
 router.post("/wishlist", verifyToken, userStatus, AddToWishlist);

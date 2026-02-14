@@ -5,6 +5,7 @@ import { Variant } from "../../models/variant.model.js";
 import Cart from "../../models/cart.model.js";
 import { createResponse } from "../../helpers/responseHandler.js";
 import Wallet from "../../models/wallet.model.js";
+import { statusCodes } from "../../constants.js";
 
 const getUserOrders = async (req, res) => {
   try {
@@ -22,43 +23,58 @@ const getUserOrders = async (req, res) => {
         },
       })
       .sort({ createdAt: -1 });
-    orders.forEach((order)=>console.log(order.items))
+
+    orders.forEach((order) => console.log(order.items));
+
     return createResponse(
       res,
-      200,
+      statusCodes.OK,
       true,
       "Orders fetched successfully",
       orders
     );
   } catch (error) {
     console.error("Error fetching orders:", error);
-    return createResponse(res, 500, false, "Server Error");
+    return createResponse(
+      res,
+      statusCodes.INTERNAL_SERVER_ERROR,
+      false,
+      "Server Error"
+    );
   }
 };
 
 const cancelOrReturnOrder = async (req, res) => {
   const { id, reason, type, payment } = req.body;
-  console.log(payment);
 
   try {
     if (!id) {
-      return createResponse(res, 400, false, "Order ID is required.");
+      return createResponse(
+        res,
+        statusCodes.BAD_REQUEST,
+        false,
+        "Order ID is required."
+      );
     }
 
     if (!type || (type !== "cancel" && type !== "return")) {
       return createResponse(
         res,
-        400,
+        statusCodes.BAD_REQUEST,
         false,
         "Action type is required and must be either 'cancel' or 'return'."
       );
     }
 
-    const order = await Order.findById(id)
-    console.log(order)
+    const order = await Order.findById(id);
 
     if (!order) {
-      return createResponse(res, 404, false, "Order not found.");
+      return createResponse(
+        res,
+        statusCodes.NOT_FOUND,
+        false,
+        "Order not found."
+      );
     }
 
     if (type === "cancel") {
@@ -67,18 +83,17 @@ const cancelOrReturnOrder = async (req, res) => {
       if (!cancellableStatuses.includes(order.status)) {
         return createResponse(
           res,
-          400,
+          statusCodes.BAD_REQUEST,
           false,
           "Order cannot be canceled at this stage."
         );
       }
-      if (payment === "Razorpay" ||payment === "Wallet" ) {
-        
+
+      if (payment === "Razorpay" || payment === "Wallet") {
         const wallet = await Wallet.findOne({ userID: req.user._id });
 
-        console.log("wallet", wallet);
         if (!wallet) {
-          const newWallet = await Wallet.create({
+          await Wallet.create({
             userID: req.user._id,
             balance: order.totalAmount,
             transactions: [
@@ -91,7 +106,6 @@ const cancelOrReturnOrder = async (req, res) => {
               },
             ],
           });
-          console.log("newWallet", newWallet);
         } else {
           wallet.balance += order.totalAmount;
           wallet.transactions.push({
@@ -109,19 +123,20 @@ const cancelOrReturnOrder = async (req, res) => {
       order.status = "Cancelled";
       order.cancellationReason = reason;
     } else if (type === "return") {
-      // Handle return
       if (order.status !== "Delivered") {
         return createResponse(
           res,
-          400,
+          statusCodes.BAD_REQUEST,
           false,
           "Only delivered orders can be returned."
         );
       }
-      if (payment === "Razorpay" ||payment === "Wallet" ) {
+
+      if (payment === "Razorpay" || payment === "Wallet") {
         const wallet = await Wallet.findOne({ userID: req.user._id });
+
         if (!wallet) {
-          const newWallet = await Wallet.create({
+          await Wallet.create({
             userID: req.user._id,
             balance: order.totalAmount,
             transactions: [
@@ -134,7 +149,6 @@ const cancelOrReturnOrder = async (req, res) => {
               },
             ],
           });
-          console.log("newWallet", newWallet);
         } else {
           wallet.balance += order.totalAmount;
           wallet.transactions.push({
@@ -152,7 +166,7 @@ const cancelOrReturnOrder = async (req, res) => {
       order.status = "Returned";
       order.returnReason = reason;
     }
-   
+
     await Promise.all(
       order.items.map(async (item) => {
         const product = await Product.findById(item.productId).populate(
@@ -170,14 +184,14 @@ const cancelOrReturnOrder = async (req, res) => {
           throw new Error(`Variant not found for ${product.Name}`);
         }
 
-        // Update stock
         variant.stock += item.quantity;
+
         await Variant.findByIdAndUpdate(variant._id, {
           stock: variant.stock,
         });
       })
     );
-    // Save the updated order
+
     await order.save();
 
     const message =
@@ -185,13 +199,18 @@ const cancelOrReturnOrder = async (req, res) => {
         ? "Order canceled successfully."
         : "Order returned successfully.";
 
-        
-    return createResponse(res, 200, true, message, type);
+    return createResponse(
+      res,
+      statusCodes.OK,
+      true,
+      message,
+      type
+    );
   } catch (error) {
     console.error("Error processing order:", error);
     return createResponse(
       res,
-      500,
+      statusCodes.INTERNAL_SERVER_ERROR,
       false,
       "Server error. Please try again later."
     );

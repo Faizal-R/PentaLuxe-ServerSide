@@ -5,19 +5,24 @@ import {
 } from "../../helpers/responseHandler.js";
 import { Variant } from "../../models/variant.model.js";
 import Wishlist from "../../models/wishlist.model.js";
+import { statusCodes } from "../../constants.js";
 
 const AddToWishlist = async (req, res) => {
   const { productId, variant } = req.body;
-  console.log(productId, variant);
   const userId = req.user._id;
 
   const selectedVarient = await Variant.findOne({ volume: variant });
   if (!selectedVarient) {
-    return createResponse(res, 404, false, "Selected Variant is Not Found");
+    return createResponse(
+      res,
+      statusCodes.NOT_FOUND,
+      false,
+      "Selected Variant is Not Found",
+    );
   }
 
   const wishlist = await Wishlist.findOne({ user: userId });
-  console.log("existing Wishlist", wishlist);
+
   if (!wishlist) {
     const WishlistData = {
       user: userId,
@@ -30,64 +35,75 @@ const AddToWishlist = async (req, res) => {
     };
 
     const createdWishlist = await Wishlist.create(WishlistData);
-    console.log(createdWishlist);
+
     return createResponse(
       res,
-      201,
+      statusCodes.CREATED,
       true,
       "Product Added to Wishlist",
-      createdWishlist
+      createdWishlist,
     );
   }
 
   const existingProduct = await wishlist.products.find(
-    (product) => product.product._id.toString() === productId
+    (product) => product.product._id.toString() === productId,
   );
-  console.log("existing Product", existingProduct);
+
   if (existingProduct) {
-    return createResponse(res, 409, false, "Product Already In the Wishlist");
+    return createResponse(
+      res,
+      statusCodes.CONFLICT,
+      false,
+      "Product Already In the Wishlist",
+    );
   }
+
   wishlist.products.push({
     product: productId,
     variant: selectedVarient._id,
   });
+
   await wishlist.save();
 
-  console.log("updatedWishlist", wishlist);
-
-  return createResponse(res, 201, true, "Product Added to Wishlist");
+  return createResponse(
+    res,
+    statusCodes.CREATED,
+    true,
+    "Product Added to Wishlist",
+  );
 };
 
 const removeFromWishlist = async (req, res) => {
   const { id } = req.params;
-  console.log("productId", id);
   const userId = req.user.id;
 
   try {
     const wishlist = await Wishlist.findOne({ user: userId });
 
     if (!wishlist) {
-      return createResponse(res, 404, false, "Wishlist not found");
+      return createResponse(
+        res,
+        statusCodes.NOT_FOUND,
+        false,
+        "Wishlist not found",
+      );
     }
 
     const updatedProducts = wishlist.products.filter(
-      (item) => item.product.toString() !== id
+      (item) => item.product.toString() !== id,
     );
 
     wishlist.products = updatedProducts;
     await wishlist.save();
 
-    console.log("updatedWishlist", wishlist);
-
     return createResponse(
       res,
-      200,
+      statusCodes.OK,
       true,
       "Product removed from wishlist",
-      wishlist
+      wishlist,
     );
   } catch (error) {
-    console.error(error);
     return serverErrorResponse(res);
   }
 };
@@ -99,61 +115,72 @@ const fetchWishlistProducts = async (req, res) => {
     try {
       const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
       const userId = decoded._id;
-      console.log(decoded,userId)
-      
-      const userWishlist = await Wishlist.findOne({ user: userId }).populate({
-        path: "products.product",
-        populate: {
-          path: "Variants",
-        },
-      })
-      .populate("products.variant")
-      .select("products -_id");
-      // console.log("userWallet", userWishlist.variant);
-      // console.log("Userwishlist",userWishlist)
+
+      const userWishlist = await Wishlist.findOne({ user: userId })
+        .populate({
+          path: "products.product",
+          populate: {
+            path: "Variants",
+          },
+        })
+        .populate("products.variant")
+        .select("products -_id");
+
       if (userWishlist) {
-        return res.status(200).json({
-          success: true,
-          message: "Wishlist retrieved successfully",
-          data: userWishlist.products,
-        });
+        return createResponse(
+          res,
+          statusCodes.OK,
+          true,
+          "Wishlist retrieved successfully",
+          userWishlist.products,
+        );
       } else {
-        return res
-          .status(200)
-          .json({ success: true, message: "Wishlist is empty", data: [] });
+        return createResponse(
+          res,
+          statusCodes.OK,
+          true,
+          "Wishlist is empty",
+          [],
+        );
       }
     } catch (error) {
-      console.error("Token verification error:", error);
-      return res
-        .status(401)
-        .json({ success: false, message: "Invalid or expired token" });
+      return createResponse(
+        res,
+        statusCodes.UNAUTHORIZED,
+        false,
+        "Invalid or expired token",
+      );
     }
   }
 
-  return res
-    .status(200)
-    .json({ success: true, message: "Wishlist is empty", data: [] });
+  return createResponse(res, statusCodes.OK, true, "Wishlist is empty", []);
 };
 
 const checkProductInWishlist = async (req, res) => {
   const { id } = req.params;
   const userId = req.user?._id;
-  if(!userId){
-    return createResponse(res, 200, false, "No User found");
+
+  if (!userId) {
+    return createResponse(res, statusCodes.OK, false, "No User found");
   }
 
   try {
-    const wishlist = await Wishlist.findOne({user:userId });
-    console.log(wishlist)
+    const wishlist = await Wishlist.findOne({ user: userId });
+
     if (!wishlist) {
-      return createResponse(res, 200, false, "Wishlist not found");
+      return createResponse(res, statusCodes.OK, false, "Wishlist not found");
     }
-    const isInWishlist = wishlist.products.find(product=>product.product._id.toString()===id)
-    return createResponse(res, 200, isInWishlist?true:false);
+
+    const isInWishlist = wishlist.products.find(
+      (product) => product.product._id.toString() === id,
+    );
+
+    return createResponse(res, statusCodes.OK, isInWishlist ? true : false);
   } catch (error) {
-    serverErrorResponse(res);
+    return serverErrorResponse(res);
   }
 };
+
 export {
   AddToWishlist,
   removeFromWishlist,
