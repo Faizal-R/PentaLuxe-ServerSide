@@ -5,7 +5,7 @@ import {
 import Order from "../../models/order.model.js";
 import Product from "../../models/product.model.js";
 import Category from "../../models/category.model.js";
-import { statusCodes } from "../../constants.js";
+import { statusCodes } from "../../constant/statusCodes.js";
 
 const getAdminDashboard = async (req, res) => {
   const { filter } = req.query;

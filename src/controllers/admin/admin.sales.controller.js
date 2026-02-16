@@ -1,3 +1,4 @@
+import { statusCodes } from "../../constant/statusCodes.js";
 import {
   createResponse,
   serverErrorResponse,
@@ -17,7 +18,7 @@ const generateSalesReport = async (req, res) => {
       }).populate("user");
       return createResponse(
         res,
-        200,
+       statusCodes.OK,
         true,
         "Sales Generatored Successfully",
         salesReport
@@ -35,7 +36,7 @@ const generateSalesReport = async (req, res) => {
     console.log("salesReport", salesReport);
     createResponse(
       res,
-      200,
+     statusCodes.OK,
       true,
       "Sales Generatored Successfully",
       salesReport

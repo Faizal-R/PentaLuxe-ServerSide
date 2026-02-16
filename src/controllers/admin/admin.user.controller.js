@@ -4,7 +4,7 @@ import {
   createResponse,
   serverErrorResponse,
 } from "../../helpers/responseHandler.js";
-import { statusCodes } from "../../constants.js";
+import { statusCodes } from "../../constant/statusCodes.js";
 
 const getAllUser = asyncHandler(async (req, res) => {
   const users = await User.find({ isVerified: true })

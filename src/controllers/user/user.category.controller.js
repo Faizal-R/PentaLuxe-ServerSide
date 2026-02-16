@@ -1,7 +1,7 @@
 import Product from "../../models/product.model.js";
 import { asyncHandler } from "../../helpers/asyncHandler.js";
 import { createResponse } from "../../helpers/responseHandler.js";
-import { statusCodes } from "../../constants.js";
+import { statusCodes } from "../../constant/statusCodes.js";
 
 const getAllProductsByCategory = asyncHandler(async (req, res) => {
   const { id } = req.params;

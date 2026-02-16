@@ -5,7 +5,7 @@ import {
 } from "../../helpers/responseHandler.js";
 import { Variant } from "../../models/variant.model.js";
 import Wishlist from "../../models/wishlist.model.js";
-import { statusCodes } from "../../constants.js";
+import { statusCodes } from "../../constant/statusCodes.js";
 
 const AddToWishlist = async (req, res) => {
   const { productId, variant } = req.body;

@@ -6,7 +6,7 @@ import {
 } from "../../helpers/responseHandler.js";
 import Category from "../../models/category.model.js";
 import { searchProducts } from "../admin/admin.product.controller.js";
-import { statusCodes } from "../../constants.js";
+import { statusCodes } from "../../constant/statusCodes.js";
 
 const productDetails = asyncHandler(async (req, res) => {
   const { id } = req.params;

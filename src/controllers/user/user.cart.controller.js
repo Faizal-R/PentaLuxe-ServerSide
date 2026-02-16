@@ -6,7 +6,7 @@ import {
   createResponse,
   serverErrorResponse,
 } from "../../helpers/responseHandler.js";
-import { statusCodes } from "../../constants.js";
+import { statusCodes } from "../../constant/statusCodes.js";
 
 const addToCart = async (req, res) => {
   const { productId, volume } = req.body;

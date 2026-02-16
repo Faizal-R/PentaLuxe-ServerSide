@@ -3,7 +3,7 @@ import {
   serverErrorResponse,
 } from "../../helpers/responseHandler.js";
 import Wallet from "../../models/wallet.model.js";
-import { statusCodes } from "../../constants.js";
+import { statusCodes } from "../../constant/statusCodes.js";
 
 const getUserWallet = async (req, res) => {
   console.log("inside user Wallet");

@@ -7,7 +7,7 @@ import Razorpay from "razorpay";
 import crypto from "crypto";
 import { createResponse, serverErrorResponse } from "../../helpers/responseHandler.js";
 import Wallet from "../../models/wallet.model.js";
-import { statusCodes } from "../../constants.js";
+import { statusCodes } from "../../constant/statusCodes.js";
 
 const createRazorpayOrder = async (req, res) => {
   try {

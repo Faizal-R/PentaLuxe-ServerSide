@@ -4,7 +4,7 @@ import {
 } from "../../helpers/responseHandler.js";
 import Offer from "../../models/offer.model.js";
 import Product from "../../models/product.model.js";
-import { statusCodes } from "../../constants.js";
+import { statusCodes } from "../../constant/statusCodes.js";
 
 const processProductOffer = async (req, res) => {
   const { DiscountPercentage, itemId } = req.body;

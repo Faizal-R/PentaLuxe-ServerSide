@@ -5,7 +5,7 @@ dotenv.config();
 // Create a transporter object using Gmail's SMTP server with TLS
 const createTransporter = () => {
   return nodemailer.createTransport({
-    service: 'gmail', // Use Gmail's service
+    service: 'gmail',
     port: 587,
     secure: true,
     requireTLS: true, 

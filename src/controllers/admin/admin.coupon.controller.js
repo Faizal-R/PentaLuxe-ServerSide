@@ -3,7 +3,7 @@ import {
   createResponse,
   serverErrorResponse,
 } from "../../helpers/responseHandler.js";
-import { statusCodes } from "../../constants.js";
+import { statusCodes } from "../../constant/statusCodes.js";
 
 const createCoupon = async (req, res) => {
   console.log(req.body);

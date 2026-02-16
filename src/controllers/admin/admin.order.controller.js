@@ -1,5 +1,5 @@
 import Order from "../../models/order.model.js";
-import { statusCodes } from "../../constants.js";
+import { statusCodes } from "../../constant/statusCodes.js";
 import {
   createResponse,
   serverErrorResponse,

@@ -5,7 +5,7 @@ import { sendOTPEmail } from "../../helpers/EmailOTPSender.js";
 import { generateOtp } from "../../utils/GenerateOtp.js";
 import { generateAccesTokenAndRefreshToken } from "../../helpers/GenerateTokens.js";
 import { createResponse } from "../../helpers/responseHandler.js";
-import { statusCodes } from "../../constants.js";
+import {statusCodes} from '../../constant/statusCodes.js'
 
 // REGISTER
 const registerUser = asyncHandler(async (req, res) => {

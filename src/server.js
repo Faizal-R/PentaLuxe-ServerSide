@@ -8,7 +8,7 @@ import cookieParser from "cookie-parser";
 import nocache from "nocache";
 
 
-dotenv.config({ path: "src/.env" });
+dotenv.config();
 process.setMaxListeners(20);
 const app = express();
 app.use(express.urlencoded({ extended: true }));
@@ -18,7 +18,7 @@ app.use(cookieParser());
 app.use(nocache());
 app.use(
   cors({
-    origin:["https://pentaluxeshop.vercel.app","http://localhost:6776",] ,
+    origin:[process.env.CLIENT_URL,process.env.LOCAL_CLIENT_URL] ,
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
     allowedHeaders: ["Content-Type", "authorization",'x-admin-authorization'],
     credentials: true,

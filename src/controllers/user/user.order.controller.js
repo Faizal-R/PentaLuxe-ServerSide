@@ -5,7 +5,7 @@ import { Variant } from "../../models/variant.model.js";
 import Cart from "../../models/cart.model.js";
 import { createResponse } from "../../helpers/responseHandler.js";
 import Wallet from "../../models/wallet.model.js";
-import { statusCodes } from "../../constants.js";
+import { statusCodes } from "../../constant/statusCodes.js";
 
 const getUserOrders = async (req, res) => {
   try {

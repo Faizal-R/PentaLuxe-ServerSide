@@ -6,7 +6,7 @@ import {
 } from "../../helpers/responseHandler.js";
 import { asyncHandler } from "../../helpers/asyncHandler.js";
 import jwt from "jsonwebtoken";
-import { statusCodes } from "../../constants.js";
+import { statusCodes } from "../../constant/statusCodes.js";
 
 const getUserProfile = asyncHandler(async (req, res) => {
   const user = req.user;
