@@ -71,7 +71,7 @@ router.put("/products/:id", uploader.single('file'), updateProduct);
 router.get("/products", getAllProducts);
 router.delete("/products/:id", deleteProduct);
 router.get("/products/:id", singleProudct);
-router.post("/search-product", searchProducts);
+router.post("/search-products", searchProducts);
 
 // Customer routes
 router.get("/customers", getAllUser);
