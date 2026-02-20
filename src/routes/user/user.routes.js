@@ -81,7 +81,7 @@ router.delete("/address-book/:id", verifyToken, userStatus, DeleteAddress);
 // Product routes with userStatus middleware
 router.get("/products", userStatus, getProducts);
 router.get("/products/:id", productDetails);
-router.post("/related-products", getRelatedProducts);
+router.get("/related-products", getRelatedProducts);
 router.post("/search-products-by-category", searchProductsByCategory);
 
 // Category routes
@@ -126,9 +126,10 @@ router.put(
   userStatus,
   paymentVerification,
 );
-router.get("/getkey", async (req, res) =>
-  res.status(200).json({ key: process.env.RAZORPAY_API_KEY }),
-);
+router.get("/getkey", async (req, res) => {
+  console.log("razopayKey", process.env.RAZORPAY_API_KEY);
+  res.status(200).json({ key: process.env.RAZORPAY_API_KEY });
+});
 
 // Coupons routes
 router.get("/coupons", userStatus, getAllCoupons);

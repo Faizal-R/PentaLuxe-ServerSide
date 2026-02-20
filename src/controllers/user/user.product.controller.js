@@ -121,7 +121,7 @@ const searchProductsByCategory = async (req, res) => {
 
 const getRelatedProducts = async (req, res) => {
   try {
-    const { categoryName, productID } = req.body;
+    const { categoryName, productID } = req.query;
 
     const category = await Category.findOne({ categoryName });
 
@@ -139,7 +139,7 @@ const getRelatedProducts = async (req, res) => {
     })
       .populate("Variants")
       .populate("CategoryId")
-      .limit(3);
+      
 
     return createResponse(
       res,
