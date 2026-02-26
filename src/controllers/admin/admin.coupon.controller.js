@@ -1,142 +1,27 @@
-import Coupon from "../../models/coupon.model.js";
-import {
-  createResponse,
-  serverErrorResponse,
-} from "../../helpers/responseHandler.js";
-import { statusCodes } from "../../constant/statusCodes.js";
+import { createResponse } from "../../helpers/responseHandler.js";
+import { asyncHandler } from "../../helpers/asyncHandler.js";
+import { couponService } from "../../services/admin/admin.coupon.service.js";
 
-const createCoupon = async (req, res) => {
-  console.log(req.body);
+const createCoupon = asyncHandler(async (req, res) => {
+  const { couponData } = req.body;
+  const result = await couponService.createCoupon(couponData);
+  return createResponse(res, result.statusCode, result.success, result.message, result.data);
+});
 
-  try {
-    const {
-      couponData: {
-        couponName,
-        discountPercentage,
-        maxDiscountPrice,
-        minimumPurchasePrice,
-        expiryDate,
-      },
-    } = req.body;
+const editCoupon = asyncHandler(async (req, res) => {
+  // Logic not implemented in original controller
+  return createResponse(res, 200, true, "Not Implemented");
+});
 
-    console.log(couponName, discountPercentage, maxDiscountPrice);
+const deleteCoupon = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const result = await couponService.deleteCoupon(id);
+  return createResponse(res, result.statusCode, result.success, result.message);
+});
 
-    if (
-      !couponName ||
-      !discountPercentage ||
-      !maxDiscountPrice ||
-      !minimumPurchasePrice ||
-      !expiryDate
-    ) {
-      return createResponse(
-        res,
-        statusCodes.BAD_REQUEST,
-        false,
-        "All fields are required."
-      );
-    }
-
-    const existingCoupon = await Coupon.findOne({ couponName });
-
-    if (existingCoupon) {
-      return createResponse(
-        res,
-        statusCodes.CONFLICT,
-        false,
-        "Coupon with this name already exists."
-      );
-    }
-
-    const newCoupon = await Coupon.create({
-      couponName,
-      discountPercentage,
-      maxDiscountPrice,
-      minimumPurchasePrice,
-      expiryDate,
-    });
-
-    console.log(newCoupon);
-
-    return createResponse(
-      res,
-      statusCodes.CREATED,
-      true,
-      "Coupon created successfully.",
-      newCoupon
-    );
-  } catch (error) {
-    console.error(error.message);
-    return serverErrorResponse(res);
-  }
-};
-
-const editCoupon = async (req, res) => {};
-
-const deleteCoupon = async (req, res) => {
-  const id = req.params.id;
-
-  try {
-    const coupon = await Coupon.findByIdAndDelete(id);
-
-    if (!coupon) {
-      return createResponse(
-        res,
-        statusCodes.NOT_FOUND,
-        false,
-        "No Coupon is Founded with The Provided Id"
-      );
-    }
-
-    return createResponse(
-      res,
-      statusCodes.OK,
-      true,
-      "Coupon Removed Successfully"
-    );
-  } catch (error) {
-    return serverErrorResponse(res);
-  }
-};
-
-const getAllCoupons = async (req, res) => {
-  console.log("inside the coupons");
-
-  try {
-    const coupons = await Coupon.find({});
-
-    const updatedCoupons = await Promise.all(
-      coupons.map(async (coupon) => {
-        try {
-          const expiryDate = new Date(coupon.expiryDate);
-
-          if (Date.now() > expiryDate.getTime()) {
-            coupon.expiryDate = null;
-            await coupon.save();
-            console.log(coupon);
-            return coupon;
-          }
-
-          return coupon;
-        } catch (error) {
-          console.log("coupon error", error);
-          return coupon;
-        }
-      })
-    );
-
-    console.log(updatedCoupons);
-
-    return createResponse(
-      res,
-      statusCodes.OK,
-      true,
-      "Coupons retrieved successfully.",
-      updatedCoupons
-    );
-  } catch (error) {
-    console.log(error);
-    return serverErrorResponse(res, "Failed to fetch coupon codes");
-  }
-};
+const getAllCoupons = asyncHandler(async (req, res) => {
+  const result = await couponService.getAllCoupons();
+  return createResponse(res, result.statusCode, result.success, result.message, result.data);
+});
 
 export { createCoupon, deleteCoupon, editCoupon, getAllCoupons };
