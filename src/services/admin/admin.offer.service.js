@@ -68,8 +68,53 @@ const listOffers = async () => {
   };
 };
 
+const deleteOffer = async (id) => {
+  const offer = await Offer.findById(id);
+  if (!offer) {
+    throw new CustomError(messages.OFFER.NOT_FOUND, statusCodes.NOT_FOUND);
+  }
+
+  if (offer.offerType === "Product") {
+    await Product.findByIdAndUpdate(offer.offerFor, { DiscountPercentage: 0 });
+  } else if (offer.offerType === "Category") {
+    await Product.updateMany({ CategoryId: offer.offerFor }, { DiscountPercentage: 0 });
+  }
+
+  await Offer.findByIdAndDelete(id);
+
+  return {
+    statusCode: statusCodes.OK,
+    success: true,
+    message: messages.OFFER.DELETED,
+  };
+};
+
+const editOffer = async (id, { DiscountPercentage }) => {
+  const offer = await Offer.findById(id);
+  if (!offer) {
+    throw new CustomError(messages.OFFER.NOT_FOUND, statusCodes.NOT_FOUND);
+  }
+
+  offer.DiscountPercentage = Number(DiscountPercentage);
+  await offer.save();
+
+  if (offer.offerType === "Product") {
+    await Product.findByIdAndUpdate(offer.offerFor, { DiscountPercentage: Number(DiscountPercentage) });
+  } else if (offer.offerType === "Category") {
+    await Product.updateMany({ CategoryId: offer.offerFor }, { DiscountPercentage: Number(DiscountPercentage) });
+  }
+
+  return {
+    statusCode: statusCodes.OK,
+    success: true,
+    message: messages.OFFER.UPDATE_SUCCESS,
+  };
+};
+
 export const adminOfferService = {
   processProductOffer,
   processCategoryOffer,
   listOffers,
+  deleteOffer,
+  editOffer,
 };

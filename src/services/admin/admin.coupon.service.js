@@ -92,8 +92,46 @@ const getAllCoupons = async () => {
   };
 };
 
+const editCoupon = async (id, couponData) => {
+  if (!id) {
+    throw new CustomError(messages.COMMON.ID_REQUIRED, statusCodes.BAD_REQUEST);
+  }
+
+  const {
+    couponName,
+    discountPercentage,
+    maxDiscountPrice,
+    minimumPurchasePrice,
+    expiryDate,
+  } = couponData;
+
+  const coupon = await Coupon.findByIdAndUpdate(
+    id,
+    {
+      couponName,
+      discountPercentage,
+      maxDiscountPrice,
+      minimumPurchasePrice,
+      expiryDate,
+    },
+    { new: true }
+  );
+
+  if (!coupon) {
+    throw new CustomError(messages.COUPON.NOT_FOUND, statusCodes.NOT_FOUND);
+  }
+
+  return {
+    statusCode: statusCodes.OK,
+    success: true,
+    message: messages.COUPON.UPDATED || "Coupon updated successfully",
+    data: coupon,
+  };
+};
+
 export const couponService = {
   createCoupon,
   deleteCoupon,
   getAllCoupons,
+  editCoupon,
 };

@@ -28,9 +28,12 @@ import {
 import {
   createCoupon,
   deleteCoupon,
+  editCoupon,
   getAllCoupons,
 } from "../../controllers/admin/admin.coupon.controller.js";
 import {
+  deleteOffer,
+  editOffer,
   ListOffers,
   processCategoryOffer,
   processProductOffer,
@@ -88,11 +91,14 @@ router.patch("/orders", changeOrderStatus);
 router.post("/coupon", createCoupon);
 router.get("/coupon", getAllCoupons);
 router.delete("/coupon/:id", deleteCoupon);
+router.put("/coupon/:id", editCoupon);
 
 // Offer
 router.patch("/product-offer", processProductOffer);
 router.patch("/category-offer", processCategoryOffer);
 router.get('/offers',ListOffers)
+router.delete("/offers/:id", deleteOffer);
+router.put("/offers/:id", editOffer);
 
 // Sales report
 router.post("/sales-report", generateSalesReport);

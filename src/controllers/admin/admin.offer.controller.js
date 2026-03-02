@@ -19,4 +19,17 @@ const ListOffers = asyncHandler(async (req, res) => {
   return createResponse(res, result.statusCode, result.success, result.message, result.data);
 });
 
-export { processProductOffer, processCategoryOffer, ListOffers };
+const deleteOffer = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const result = await adminOfferService.deleteOffer(id);
+  return createResponse(res, result.statusCode, result.success, result.message, result.data);
+});
+
+const editOffer = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { DiscountPercentage } = req.body;
+  const result = await adminOfferService.editOffer(id, { DiscountPercentage });
+  return createResponse(res, result.statusCode, result.success, result.message, result.data);
+});
+
+export { processProductOffer, processCategoryOffer, ListOffers, deleteOffer, editOffer };

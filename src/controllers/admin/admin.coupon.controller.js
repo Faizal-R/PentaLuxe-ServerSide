@@ -9,8 +9,10 @@ const createCoupon = asyncHandler(async (req, res) => {
 });
 
 const editCoupon = asyncHandler(async (req, res) => {
-  // Logic not implemented in original controller
-  return createResponse(res, 200, true, "Not Implemented");
+  const { id } = req.params;
+  const { couponData } = req.body;
+  const result = await couponService.editCoupon(id, couponData);
+  return createResponse(res, result.statusCode, result.success, result.message, result.data);
 });
 
 const deleteCoupon = asyncHandler(async (req, res) => {
