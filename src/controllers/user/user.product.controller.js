@@ -14,7 +14,7 @@ const getProducts = asyncHandler(async (req, res) => {
 });
 
 const searchProductsByCategory = asyncHandler(async (req, res) => {
-  const { text } = req.body;
+  const { text } = req.query;
   const result = await productService.searchProductsByCategory(text);
   return createResponse(res, result.statusCode, result.success, result.message, result.data);
 });

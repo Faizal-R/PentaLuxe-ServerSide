@@ -82,7 +82,7 @@ router.delete("/address-book/:id", verifyToken, userStatus, DeleteAddress);
 router.get("/products", userStatus, getProducts);
 router.get("/products/:id", productDetails);
 router.get("/related-products", getRelatedProducts);
-router.post("/search-products-by-category", searchProductsByCategory);
+router.get("/search-products-by-category", searchProductsByCategory);
 
 // Category routes
 router.get("/categories", getCategories);

@@ -8,7 +8,7 @@ const getUserProfile = asyncHandler(async (req, res) => {
 });
 
 const updateUserProfile = asyncHandler(async (req, res) => {
-  const { email, phone, username } = req.body.user;
+  const { email, phone, username } = req.body;
   const result = await profileService.updateUserProfile(req.user, { email, phone, username });
   return createResponse(res, result.statusCode, result.success, result.message, result.data);
 });
