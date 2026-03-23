@@ -24,6 +24,12 @@ app.use(
     credentials: true,
   })
 );
+
+app.get('/health',(req,res)=>{
+ res.json({
+  status:"OK"
+ })
+})
 // Routers
 app.use("/api/user", userRouter);
 app.use("/api/admin", adminRouter);
