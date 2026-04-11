@@ -7,7 +7,7 @@ import {
   VerifyOtp,
   logInUser,
   googleAuth,
-} from "../../controllers/user/user.controllers.js";
+} from "../../controllers/user/auth.controllers.js";
 import verifyToken from "../../middlewares/verifyToken.middlerware.js";
 import userStatus from "../../middlewares/userStatus.middleware.js"; // Make sure the path is correct
 import {

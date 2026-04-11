@@ -30,7 +30,7 @@ const registerUser = async ({ username, email, password, phone }) => {
   });
 
   const createdUser = await User.findById(user._id).select(
-    "-password -otp -refreshToken",
+    "_id email username phone",
   );
 
   return {
@@ -194,7 +194,7 @@ const googleAuth = async ({ username, email }) => {
   };
 };
 
-export const userService = {
+export const authService = {
   registerUser,
   verifyOtp,
   resendOtp,
